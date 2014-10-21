@@ -12,9 +12,10 @@ detector = cv2.SIFT()
 
 #writer = csv.writer(file('D:\\a.csv', 'wb'))
 #writer.writerow(['Column1'])
-keypoints = detector.detect(gray,None)
-#writer.writerow(keypoints)
 
+#writer.writerow(keypoints)
+#生成关键点
+keypoints = detector.detect(gray,None)
 img = cv2.drawKeypoints(gray,keypoints,flags = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 res = detector.compute(gray,keypoints)
 
