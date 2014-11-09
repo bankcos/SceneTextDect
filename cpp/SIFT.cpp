@@ -7,6 +7,7 @@
 using namespace cv;
 using namespace std;
 
+//求局部熵
 float entropy(Mat Roi, KeyPoint p)
 {
 	Mat img_1 = Roi;
@@ -22,12 +23,11 @@ float entropy(Mat Roi, KeyPoint p)
 		for (j = p.pt.y - p.size;j<p.pt.y+p.size; j++)
 		{
 			if (j < 0) j = 0;
-			if (j>img_1.cols - 1) {
-				continue;
-			}
+			if (j>img_1.cols - 1) continue;
 			else hui[img_1.at<uchar>(i, j)]++;
 		}
 	}
+
 	for (i = 0; i < 256; i++){
 		hui[i] = hui[i] / (img_1.rows*img_1.cols);
 	}
@@ -40,14 +40,44 @@ float entropy(Mat Roi, KeyPoint p)
 	return result;
 }
 
+//求平均半径
+float avgridio(std::vector<KeyPoint> p){
+	int len = p.size();
+	float avgRidio = 0;
+	for (int i = 0; i < len; i++){
+		avgRidio += p[i].size;
+	}
+	return avgRidio / len;
+}
+
+//回调函数，显示点击点的坐标
+void mousePoint(int event, int x, int y, int flag,void *param){
+	switch (event)
+	{
+	case CV_EVENT_LBUTTONDOWN:
+	{
+	cout << " 坐标 "<<x<<" "<<y << endl;
+	
+	}
+	break;
+	default:
+		break;
+	}
+}
+
+//计算两坐标点距离
+float dis2Points(Point a, Point b){
+	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
+}
+
 int main(int argc, char** argv)
 {
-	Mat img_1 = imread("d:\\project\\gray.jpg",CV_LOAD_IMAGE_GRAYSCALE);
+	Mat img_1 = imread("d:\\project\\gray.jpg",CV_LOAD_IMAGE_COLOR);
 	if (!img_1.data){
 		std::cout << "Can't open" << std::endl;
 	}
 	SiftFeatureDetector detector;
-	std::vector<KeyPoint> kp1, kp2;
+	std::vector<KeyPoint> kp1,kp2;
 	detector.detect(img_1, kp1);
 	//FeaturesExtract
 	SiftDescriptorExtractor extractor;
@@ -60,20 +90,55 @@ int main(int argc, char** argv)
 	std::cout << "size of description of Img1: " << kp1.size() << std::endl;
 	
 
-	int numOfkp=0;//关键点数量
 	float sum,perEntropy;
 	sum = 0;
-	for (numOfkp = 0; numOfkp < kp1.size(); numOfkp++){
-		perEntropy=entropy(img_1, kp1[numOfkp]);
-		if (perEntropy < 0.1) kp1.pop_back();
-		cout << numOfkp << "  " << perEntropy << endl;
+
+	//定义存放覆盖点的容器
+	std::vector<int> numcircle;
+	for (int len = 0; len < kp1.size(); len++){
+			perEntropy=entropy(img_1, kp1[len]);
+			if (perEntropy > 0.005) kp1.pop_back();
+			//circle(img_1, Point(kp1[len].pt.x, kp1[len].pt.y), kp1[len].size, Scalar(0, 255, 0));
+			//cout << len << "  " << perEntropy << endl;
+
+	}
+	std::cout << "after entropy: " << kp1.size() << std::endl;
+	for (int len = 0; len < kp1.size(); len++){
+		numcircle.push_back(0);
+
+		//第二层循环，计算邻域点
+		for (int i = 0; i < kp1.size(); i++){
+			float dis;
+			if (i != len){
+				dis = dis2Points(kp1[len].pt, kp1[i].pt);
+				//距离小于半径，则该点覆盖的点数++
+				if(dis<kp1[len].size*1.5) numcircle[len]++;
+			}
+
+		}
+		//cout << len << "  " << numcircle[len]<< endl;
+		if (numcircle[len]>0) {			
+			//circle(img_1, Point(kp1[len].pt.x, kp1[len].pt.y), kp1[len].size, Scalar(0, 255, 0));
+			kp2.push_back(kp1[len]);
+		
+		}
+		//else
+		{
+			//kp1.pop_back();
+		}
 	}
 
-	drawKeypoints(img_1, kp1, res1, Scalar::all(-1));
+
+	cout << "after filtering "<<kp2.size() << endl;
+	drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
 	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
-	namedWindow("Dis", WINDOW_AUTOSIZE);
-	cvShowImage("Dis", transimg1);
+	namedWindow("Display", WINDOW_AUTOSIZE);
+		cvShowImage("Display", transimg1);
+	//imshow("Display", img_1);
+	//注册鼠标事件
+	setMouseCallback("Display", mousePoint);
+
 
 	waitKey(0);
 	return 0;
