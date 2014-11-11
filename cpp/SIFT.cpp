@@ -3,9 +3,90 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/features2d.hpp"
+#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace cv;
 using namespace std;
+
+
+int ostuKeypoint(Mat img,std::vector<KeyPoint> p){
+	assert(NULL != img.data);
+
+	KeyPoint p1;
+	int width = img.cols;
+	int height = img.rows;
+	int pixelCount[256] = { 0 };
+	float pixelPro[256] = { 0 };
+	//总数为关键点个数
+	int pixelSum = p.size();
+	int threshold = 0;
+
+	//统计灰度级中每个像素在整幅图中的个数
+	for (int i = 0; i < pixelSum; i++){
+		p1 = p[i];
+
+		//在关键点处的灰度值
+		pixelCount[img.at<uchar>(p1.pt.y,p1.pt.x)]++;
+
+	}
+	float tmp1 = 0;
+	//计算每阶灰度在关键点中的比例
+	for (int i = 0; i < 256; i++)
+	{
+		pixelPro[i] = (float)(pixelCount[i]) / (float)(pixelSum);
+		tmp1 += pixelPro[i];
+		cout << tmp1 << endl;
+	}
+
+	//经典ostu算法，得到前景和背景的分割
+	//遍历灰度级[0,255]，计算出方差的最大灰度值，为最佳阈值
+	/* 对于一幅图像，设当前景与背景的分割阈值为t时，前景点占图像比例为w0，
+	均值为u0，背景点占图像比例为w1，均值为u1。则整个图像的均值为u = w0*u0+w1*u1。
+	建立目标函数g(t)=w0*(u0-u)^2+w1*(u1-u)^2，g(t)就是当分割阈值为t时的类间方差表达式。
+	OTSU算法使得g(t)取得全局最大值，当g(t)为最大时所对应的t称为最佳阈值。	*/
+	float w0, w1, u0tmp, u1tmp, u0, u1, u, deltaTmp, deltaMax, c0, c1 = 0;
+	deltaMax = 0;
+	for (int i = 0; i < 256; i++){
+
+		w0 = w1 = u0tmp = u1tmp = u0 = u1 = u = deltaTmp = c0 = c1 = 0;
+
+		for (int j = 0; j < 256; j++)
+		{
+			if (j <= i) //前景部分
+			{
+				//以i为阈值分类，第一类总的概率
+				w0 += pixelPro[j];
+				u0tmp += j * pixelPro[j];
+
+			}
+			else       //背景部分
+			{
+				//以i为阈值分类，第二类总的概率
+				w1 += pixelPro[j];
+				u1tmp += j * pixelPro[j];
+
+			}
+		}
+
+		u0 = u0tmp / w0;
+		u1 = u1tmp / w1;
+		u = u0tmp + u1tmp;  //平均灰度
+		//		cout << i<<"  "<<u0 << "  " << u1 << "   "<<u << endl;
+		//	cout << i << "  " << u << endl;
+		//计算间类方差
+		deltaTmp = w0 * (u0 - u)*(u0 - u) + w1 * (u1 - u)*(u1 - u);
+		//找出最大值
+		if (deltaTmp > deltaMax)
+		{
+			deltaMax = deltaTmp;
+			threshold = i;
+		}
+	}
+
+	return threshold;
+}
+
+
 
 //求局部熵
 float entropy(Mat Roi, KeyPoint p)
@@ -130,12 +211,19 @@ int main(int argc, char** argv)
 
 
 	cout << "after filtering "<<kp2.size() << endl;
+
+	int thresholdvelue = ostuKeypoint(img_1,kp2);
+
+	//Mat src_bin;
+	//auto oksd = threshold(img_1, src_bin, thresholdvelue, 255, CV_THRESH_BINARY);
+
+
 	drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
 	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
 	namedWindow("Display", WINDOW_AUTOSIZE);
-		cvShowImage("Display", transimg1);
-	//imshow("Display", img_1);
+	cvShowImage("Display", transimg1);
+	//imshow("Display", src_bin);
 	//注册鼠标事件
 	setMouseCallback("Display", mousePoint);
 
