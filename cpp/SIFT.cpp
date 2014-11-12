@@ -1,11 +1,67 @@
 #include <iostream>
 #include "opencv2/core/core.hpp"
-#include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/features2d.hpp"
+#include <stdio.h>
+#include <stdlib.h>
+#include "region.cpp"
+#include "distance.cpp"
 
 using namespace cv;
 using namespace std;
+
+int numOfRegion;//聚类数量
+
+float dis2Points(Point a, Point b){
+	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
+}
+vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
+{
+	vector<KeyPoint> kp3;
+	float minGrowDis =20;
+	int minGrayDis = 10;
+	//种子点与目标点的灰度值
+	int seedGray, tmpGray;
+	//种子点
+	KeyPoint seed;
+	//k分类区域
+
+	//候选点非空
+	while (!p.empty())
+	{
+		seed = p[p.size() - 1];
+		seed.class_id = numOfRegion;
+		p.pop_back();
+		//$$$$$$$$$$
+		seedGray = img.at<uchar>(seed.pt.y, seed.pt.x);
+		//将种子点放入新容器
+		kp3.push_back(seed);
+		//采用遍历算法
+		for (int i = 0; i < p.size(); i++)
+		{
+			float dis;
+			KeyPoint tmpPoint;
+			tmpPoint = p[i];
+			tmpGray = img.at<uchar>(tmpPoint.pt.y, tmpPoint.pt.x);
+			//计算2两点间距离
+			dis = dis2Points(seed.pt, tmpPoint.pt);
+			//通过距离和灰度差判断是否是我族类
+			//
+			if (dis < minGrowDis && abs(seedGray - tmpGray) < minGrayDis)
+			{
+				tmpPoint.class_id = numOfRegion;
+				kp3.push_back(tmpPoint);
+				p.erase(p.begin() + i);
+				i--;
+			}
+
+		}
+
+		//聚类种类++
+		numOfRegion++;
+	}
+	return kp3;
+}
 
 //求局部熵
 float entropy(Mat Roi, KeyPoint p)
@@ -65,10 +121,12 @@ void mousePoint(int event, int x, int y, int flag,void *param){
 	}
 }
 
-//计算两坐标点距离
-float dis2Points(Point a, Point b){
-	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
-}
+////计算两坐标点距离
+//float dis2Points(Point a, Point b){
+//	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
+//}
+
+
 
 int main(int argc, char** argv)
 {
@@ -130,12 +188,20 @@ int main(int argc, char** argv)
 
 
 	cout << "after filtering "<<kp2.size() << endl;
-	drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
-	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
+
+	auto kp3 = regionGrowing(img_1, kp2);
+	
+	for (int i = 0; i < kp3.size(); i++)
+	{
+		circle(img_1, kp3[i].pt, kp3[i].size, Scalar(kp3[i].class_id, kp3[i].class_id, kp3[i].class_id), -1);
+
+	}
+	//drawKeypoints(img_1, kp2, res1, Scalar::all(-1),4);
+	//IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
 	namedWindow("Display", WINDOW_AUTOSIZE);
-		cvShowImage("Display", transimg1);
-	//imshow("Display", img_1);
+	//	cvShowImage("Display", transimg1);
+	imshow("Display", img_1);
 	//注册鼠标事件
 	setMouseCallback("Display", mousePoint);
 
@@ -143,3 +209,7 @@ int main(int argc, char** argv)
 	waitKey(0);
 	return 0;
 }
+
+
+
+
