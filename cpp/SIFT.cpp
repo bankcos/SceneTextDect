@@ -2,24 +2,25 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/nonfree/features2d.hpp"
-<<<<<<< HEAD
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "region.cpp"
 #include "distance.cpp"
-=======
+
 #include <opencv2/imgproc/imgproc.hpp>
->>>>>>> origin/master
+
 
 using namespace cv;
 using namespace std;
 
-<<<<<<< HEAD
+
 int numOfRegion;//聚类数量
 
 float dis2Points(Point a, Point b){
 	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
 }
+/*
 vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 {
 	vector<KeyPoint> kp3;
@@ -29,7 +30,6 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 	int seedGray, tmpGray;
 	//种子点
 	KeyPoint seed;
-	//k分类区域
 
 	//候选点非空
 	while (!p.empty())
@@ -67,8 +67,58 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 	}
 	return kp3;
 }
+*/
+vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
+{
+	//临时容器
+	vector<KeyPoint> kp3;
+	float minGrowDis = 20;
+	int minGrayDis = 10;
+	//种子点与目标点的灰度值
+	int seedGray, tmpGray;
+	//种子点
+	KeyPoint seed;
 
-=======
+	//候选点非空
+	while (!p.empty())
+	{
+		seed = p[p.size() - 1];
+		seed.class_id = numOfRegion;
+		p.pop_back();
+		kp3.push_back(seed);
+
+		//此双重循环后剩余点需重新聚合
+		for (int i = kp3.size()-1; i < kp3.size(); i++)
+		{
+			//按顺序取kp3中的元素，作为种子点
+			seed = kp3[i];
+			//$$$$$$$$$$
+			seedGray = img.at<uchar>(seed.pt.y, seed.pt.x);
+			for (int j = 0; j < p.size();j++)
+			{
+				float dis;
+				KeyPoint tmpPoint;
+				tmpPoint = p[j];
+				tmpGray = img.at<uchar>(tmpPoint.pt.y, tmpPoint.pt.x);
+				//计算2两点间距离
+				dis = dis2Points(seed.pt, tmpPoint.pt);
+				//通过距离和灰度差判断是否是我族类
+				if (dis < minGrowDis && abs(seedGray - tmpGray) < minGrayDis)
+				{
+					tmpPoint.class_id = numOfRegion;
+					kp3.push_back(tmpPoint);
+					p.erase(p.begin() + j);
+					j--;
+				}
+
+			}
+		}
+		//聚类种类++
+		numOfRegion++;
+	}
+	return kp3;
+}
+
 
 int ostuKeypoint(Mat img,std::vector<KeyPoint> p){
 	assert(NULL != img.data);
@@ -148,8 +198,6 @@ int ostuKeypoint(Mat img,std::vector<KeyPoint> p){
 }
 
 
-
->>>>>>> origin/master
 //求局部熵
 float entropy(Mat Roi, KeyPoint p)
 {
@@ -217,6 +265,20 @@ void mousePoint(int event, int x, int y, int flag,void *param){
 
 int main(int argc, char** argv)
 {
+	/*
+	vector<char> p;
+	for (int i = 0; i < 3; i++){
+		p.push_back(i);
+	}
+
+	for (int i = 0; i < p.size(); i++){
+		p.push_back(1);
+		cout << i << endl;
+
+	}
+*/
+
+
 	Mat img_1 = imread("d:\\project\\gray.jpg",CV_LOAD_IMAGE_COLOR);
 	if (!img_1.data){
 		std::cout << "Can't open" << std::endl;
@@ -276,12 +338,11 @@ int main(int argc, char** argv)
 
 	cout << "after filtering "<<kp2.size() << endl;
 
-<<<<<<< HEAD
 	auto kp3 = regionGrowing(img_1, kp2);
 	
 	for (int i = 0; i < kp3.size(); i++)
 	{
-		circle(img_1, kp3[i].pt, kp3[i].size, Scalar(kp3[i].class_id, kp3[i].class_id, kp3[i].class_id), -1);
+		circle(img_1, kp3[i].pt, kp3[i].size, Scalar(0, kp3[i].class_id, 0), -1);
 
 	}
 	//drawKeypoints(img_1, kp2, res1, Scalar::all(-1),4);
@@ -290,20 +351,20 @@ int main(int argc, char** argv)
 	namedWindow("Display", WINDOW_AUTOSIZE);
 	//	cvShowImage("Display", transimg1);
 	imshow("Display", img_1);
-=======
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
 	int thresholdvelue = ostuKeypoint(img_1,kp2);
 
 	//Mat src_bin;
 	//auto oksd = threshold(img_1, src_bin, thresholdvelue, 255, CV_THRESH_BINARY);
 
 
-	drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
+	//drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
 	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
-	namedWindow("Display", WINDOW_AUTOSIZE);
-	cvShowImage("Display", transimg1);
+//	namedWindow("Display", WINDOW_AUTOSIZE);
+//	cvShowImage("Display", transimg1);
 	//imshow("Display", src_bin);
->>>>>>> origin/master
+
 	//注册鼠标事件
 	setMouseCallback("Display", mousePoint);
 
