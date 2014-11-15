@@ -16,6 +16,7 @@ using namespace std;
 
 
 int numOfRegion;//聚类数量
+vector<KeyPoint> kp3;
 
 float dis2Points(Point a, Point b){
 	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
@@ -71,9 +72,9 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 {
 	//临时容器
-	vector<KeyPoint> kp3;
-	float minGrowDis = 20;
-	int minGrayDis = 10;
+	vector<KeyPoint> kp;
+	float minGrowDis = 15;
+	int minGrayDis = 9;
 	//种子点与目标点的灰度值
 	int seedGray, tmpGray;
 	//种子点
@@ -85,13 +86,13 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 		seed = p[p.size() - 1];
 		seed.class_id = numOfRegion;
 		p.pop_back();
-		kp3.push_back(seed);
+		kp.push_back(seed);
 
 		//此双重循环后剩余点需重新聚合
-		for (int i = kp3.size()-1; i < kp3.size(); i++)
+		for (int i = kp.size()-1; i < kp.size(); i++)
 		{
-			//按顺序取kp3中的元素，作为种子点
-			seed = kp3[i];
+			//按顺序取kp中的元素，作为种子点
+			seed = kp[i];
 			//$$$$$$$$$$
 			seedGray = img.at<uchar>(seed.pt.y, seed.pt.x);
 			for (int j = 0; j < p.size();j++)
@@ -106,7 +107,7 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 				if (dis < minGrowDis && abs(seedGray - tmpGray) < minGrayDis)
 				{
 					tmpPoint.class_id = numOfRegion;
-					kp3.push_back(tmpPoint);
+					kp.push_back(tmpPoint);
 					p.erase(p.begin() + j);
 					j--;
 				}
@@ -116,7 +117,7 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 		//聚类种类++
 		numOfRegion++;
 	}
-	return kp3;
+	return kp;
 }
 
 
@@ -241,20 +242,45 @@ float avgridio(std::vector<KeyPoint> p){
 	return avgRidio / len;
 }
 
+int findPoint(int x, int y,vector<KeyPoint> p)
+{
+	float dis ,mindis=999999999;
+	int minIndex;
+	int i;
+	for ( i = 0; i < p.size()-1; i++)
+	{
+		dis = dis2Points(Point(x, y), p[i].pt);
+		if (dis < mindis)
+		{
+			mindis = dis;
+			minIndex = i;
+		}
+	}
+	return minIndex;
+}
+
 //回调函数，显示点击点的坐标
 void mousePoint(int event, int x, int y, int flag,void *param){
 	switch (event)
 	{
 	case CV_EVENT_LBUTTONDOWN:
 	{
-	cout << " 坐标 "<<x<<" "<<y << endl;
-	
+		 cout << " 坐标 " << x << " " << y << endl;
+
 	}
-	break;
+		break;
+	case CV_EVENT_RBUTTONDOWN:
+	{
+		
+		cout << kp3[findPoint(x,y,kp3)].class_id<< endl;
+	}
+		break;
 	default:
 		break;
 	}
 }
+
+
 
 ////计算两坐标点距离
 //float dis2Points(Point a, Point b){
@@ -288,9 +314,7 @@ int main(int argc, char** argv)
 	detector.detect(img_1, kp1);
 	//FeaturesExtract
 	SiftDescriptorExtractor extractor;
-	Mat des1;
-	//提取关键点
-	extractor.compute(img_1,kp1,des1);
+
 	//res为保存画点后的图形
 	Mat res1;
 	
@@ -334,24 +358,30 @@ int main(int argc, char** argv)
 			//kp1.pop_back();
 		}
 	}
+	Mat des2;
+	extractor.compute(img_1, kp2, des2);
 
 
+
+	/*区域增长
 	cout << "after filtering "<<kp2.size() << endl;
 
-	auto kp3 = regionGrowing(img_1, kp2);
+	kp3 = regionGrowing(img_1, kp2);
 	
 	for (int i = 0; i < kp3.size(); i++)
 	{
 		circle(img_1, kp3[i].pt, kp3[i].size, Scalar(0, kp3[i].class_id, 0), -1);
 
 	}
+*/
 	//drawKeypoints(img_1, kp2, res1, Scalar::all(-1),4);
 	//IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
 	namedWindow("Display", WINDOW_AUTOSIZE);
 	//	cvShowImage("Display", transimg1);
 	imshow("Display", img_1);
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                    
+
 	int thresholdvelue = ostuKeypoint(img_1,kp2);
 
 	//Mat src_bin;
