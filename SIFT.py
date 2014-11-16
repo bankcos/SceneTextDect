@@ -19,8 +19,6 @@ keypoints = detector.detect(gray,None)
 img = cv2.drawKeypoints(gray,keypoints,flags = cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 res = detector.compute(gray,keypoints)
 
-print res
-
 
 cv2.imshow('SIFT',img);
 cv2.waitKey(0)
