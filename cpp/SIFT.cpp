@@ -21,54 +21,7 @@ vector<KeyPoint> kp3;
 float dis2Points(Point a, Point b){
 	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
 }
-/*
-vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
-{
-	vector<KeyPoint> kp3;
-	float minGrowDis =20;
-	int minGrayDis = 10;
-	//种子点与目标点的灰度值
-	int seedGray, tmpGray;
-	//种子点
-	KeyPoint seed;
 
-	//候选点非空
-	while (!p.empty())
-	{
-		seed = p[p.size() - 1];
-		seed.class_id = numOfRegion;
-		p.pop_back();
-		//$$$$$$$$$$
-		seedGray = img.at<uchar>(seed.pt.y, seed.pt.x);
-		//将种子点放入新容器
-		kp3.push_back(seed);
-		//采用遍历算法
-		for (int i = 0; i < p.size(); i++)
-		{
-			float dis;
-			KeyPoint tmpPoint;
-			tmpPoint = p[i];
-			tmpGray = img.at<uchar>(tmpPoint.pt.y, tmpPoint.pt.x);
-			//计算2两点间距离
-			dis = dis2Points(seed.pt, tmpPoint.pt);
-			//通过距离和灰度差判断是否是我族类
-			//
-			if (dis < minGrowDis && abs(seedGray - tmpGray) < minGrayDis)
-			{
-				tmpPoint.class_id = numOfRegion;
-				kp3.push_back(tmpPoint);
-				p.erase(p.begin() + i);
-				i--;
-			}
-
-		}
-
-		//聚类种类++
-		numOfRegion++;
-	}
-	return kp3;
-}
-*/
 vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 {
 	//临时容器
@@ -147,7 +100,6 @@ int ostuKeypoint(Mat img,std::vector<KeyPoint> p){
 	{
 		pixelPro[i] = (float)(pixelCount[i]) / (float)(pixelSum);
 		tmp1 += pixelPro[i];
-		cout << tmp1 << endl;
 	}
 
 	//经典ostu算法，得到前景和背景的分割
@@ -272,7 +224,7 @@ void mousePoint(int event, int x, int y, int flag,void *param){
 	case CV_EVENT_RBUTTONDOWN:
 	{
 		
-		cout << kp3[findPoint(x,y,kp3)].class_id<< endl;
+		cout << "聚类 "<<kp3[findPoint(x,y,kp3)].class_id<< endl;
 	}
 		break;
 	default:
@@ -305,10 +257,12 @@ int main(int argc, char** argv)
 */
 
 
+
 	Mat img_1 = imread("d:\\project\\gray.jpg",CV_LOAD_IMAGE_COLOR);
 	if (!img_1.data){
 		std::cout << "Can't open" << std::endl;
 	}
+
 	SiftFeatureDetector detector;
 	std::vector<KeyPoint> kp1,kp2;
 	detector.detect(img_1, kp1);
@@ -317,13 +271,20 @@ int main(int argc, char** argv)
 
 	//res为保存画点后的图形
 	Mat res1;
-	
 	std::cout << "size of description of Img1: " << kp1.size() << std::endl;
-	
 
+	FileStorage fs("d:\\project\\test.xml", FileStorage::WRITE);
+	fs << "KeyPoint" << kp1;
+
+	fs.release();
+	exit(0);
+
+
+/**************************
+	熵计算
+***************************/
 	float sum,perEntropy;
 	sum = 0;
-
 	//定义存放覆盖点的容器
 	std::vector<int> numcircle;
 	for (int len = 0; len < kp1.size(); len++){
@@ -334,6 +295,9 @@ int main(int argc, char** argv)
 
 	}
 	std::cout << "after entropy: " << kp1.size() << std::endl;
+/**************************
+剔除相邻点
+***************************/
 	for (int len = 0; len < kp1.size(); len++){
 		numcircle.push_back(0);
 
@@ -358,30 +322,29 @@ int main(int argc, char** argv)
 			//kp1.pop_back();
 		}
 	}
+	cout << "after filtering " << kp2.size() << endl;
+
 	Mat des2;
 	extractor.compute(img_1, kp2, des2);
-
-
-
-	/*区域增长
-	cout << "after filtering "<<kp2.size() << endl;
-
+/**************************
+		区域生长
+**************************/
+	
 	kp3 = regionGrowing(img_1, kp2);
 	
 	for (int i = 0; i < kp3.size(); i++)
 	{
 		circle(img_1, kp3[i].pt, kp3[i].size, Scalar(0, kp3[i].class_id, 0), -1);
-
 	}
-*/
-	//drawKeypoints(img_1, kp2, res1, Scalar::all(-1),4);
-	//IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
+
+/**************************
+	显示图片
+**************************/
 
 	namedWindow("Display", WINDOW_AUTOSIZE);
 	//	cvShowImage("Display", transimg1);
 	imshow("Display", img_1);
                                                                                     
-
 	int thresholdvelue = ostuKeypoint(img_1,kp2);
 
 	//Mat src_bin;
@@ -391,13 +354,15 @@ int main(int argc, char** argv)
 	//drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
 	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
-//	namedWindow("Display", WINDOW_AUTOSIZE);
-//	cvShowImage("Display", transimg1);
-	//imshow("Display", src_bin);
 
 	//注册鼠标事件
 	setMouseCallback("Display", mousePoint);
 
+	//drawKeypoints(img_1, kp2, res1, Scalar::all(-1), 4);
+	//IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
+	//namedWindow("Display", WINDOW_AUTOSIZE);
+	//cvShowImage("Display", transimg1);
+	//imshow("Display", src_bin);
 
 	waitKey(0);
 	return 0;
