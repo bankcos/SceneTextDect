@@ -13,10 +13,19 @@
 
 using namespace cv;
 using namespace std;
-
+struct recRange
+{
+	int x1, y1, x2, y2;
+};
 
 int numOfRegion;//聚类数量
 vector<KeyPoint> kp3;
+bool drawing;
+int mouseX, mouseY;
+Mat img_0;
+vector<recRange>  myRange;
+Mat sampleFeature, sampleLabel;
+
 
 float dis2Points(Point a, Point b){
 	return sqrt((a.x - b.x)*(a.x - b.x) + (a.y - b.y)*(a.y - b.y));
@@ -72,6 +81,23 @@ vector<KeyPoint> regionGrowing(Mat img, vector<KeyPoint> p)
 	}
 	return kp;
 }
+
+int flagKeypoint(vector<KeyPoint> kp)
+{
+	for (int i = 0; i < kp.size(); i++)
+	{
+
+		int c;
+		c = 1;
+		Mat tmpLabel(1, 1, CV_16UC1, c);
+		sampleLabel.push_back(tmpLabel);
+		
+	}
+	cout << sampleLabel << endl;
+	cout << sampleLabel.size() << endl;
+	return 0;
+}
+
 
 
 int ostuKeypoint(Mat img,std::vector<KeyPoint> p){
@@ -213,19 +239,36 @@ int findPoint(int x, int y,vector<KeyPoint> p)
 
 //回调函数，显示点击点的坐标
 void mousePoint(int event, int x, int y, int flag,void *param){
+	Mat tmpimg;
+	recRange tmpRag;
+	img_0.copyTo(tmpimg);
 	switch (event)
-	{
-	case CV_EVENT_LBUTTONDOWN:
-	{
-		 cout << " 坐标 " << x << " " << y << endl;
+	{	
+		//鼠标左键开始选择区域
+		case CV_EVENT_LBUTTONDOWN:
+		{
+			drawing = true;
+			mouseX = x; mouseY = y;
 
-	}
+		}
+			break;
+	case CV_EVENT_MOUSEMOVE:
+		if (drawing == true && flag == 1) rectangle(tmpimg, Point(mouseX, mouseY), Point(x, y), (255, 0, 255), 1);
+		imshow("Display", tmpimg);
+		break;
+
+	case CV_EVENT_LBUTTONUP:
+		drawing = false;
+		tmpRag.x1 = mouseX; tmpRag.y1 = mouseY;
+		tmpRag.x2 = x; tmpRag.y2 = y;
+		myRange.push_back(tmpRag);
+		break;
+	//按鼠标中键取消上次的选点
+	case CV_EVENT_MBUTTONDBLCLK:
+		if (myRange.size() > 0) myRange.pop_back();
 		break;
 	case CV_EVENT_RBUTTONDOWN:
-	{
-		
 		cout << "聚类 "<<kp3[findPoint(x,y,kp3)].class_id<< endl;
-	}
 		break;
 	default:
 		break;
@@ -241,7 +284,7 @@ void mousePoint(int event, int x, int y, int flag,void *param){
 
 
 
-int main(int argc, char** argv)
+int bProgess(String path)
 {
 	/*
 	vector<char> p;
@@ -258,7 +301,8 @@ int main(int argc, char** argv)
 
 
 
-	Mat img_1 = imread("d:\\project\\gray.jpg",CV_LOAD_IMAGE_COLOR);
+	Mat img_1 = imread(path,CV_LOAD_IMAGE_GRAYSCALE);
+
 	if (!img_1.data){
 		std::cout << "Can't open" << std::endl;
 	}
@@ -269,17 +313,7 @@ int main(int argc, char** argv)
 	//FeaturesExtract
 	SiftDescriptorExtractor extractor;
 
-	//res为保存画点后的图形
-	Mat res1;
-	std::cout << "size of description of Img1: " << kp1.size() << std::endl;
-
-	FileStorage fs("d:\\project\\test.xml", FileStorage::WRITE);
-	fs << "KeyPoint" << kp1;
-
-	fs.release();
-	exit(0);
-
-
+	std::cout << "Totel: " << kp1.size() << std::endl;
 /**************************
 	熵计算
 ***************************/
@@ -298,21 +332,24 @@ int main(int argc, char** argv)
 /**************************
 剔除相邻点
 ***************************/
-	for (int len = 0; len < kp1.size(); len++){
+	for (int len = 0; len < kp1.size(); len++)
+	{
 		numcircle.push_back(0);
 
 		//第二层循环，计算邻域点
-		for (int i = 0; i < kp1.size(); i++){
+		for (int i = 0; i < kp1.size(); i++)
+		{
 			float dis;
 			if (i != len){
 				dis = dis2Points(kp1[len].pt, kp1[i].pt);
 				//距离小于半径，则该点覆盖的点数++
-				if(dis<kp1[len].size*1.5) numcircle[len]++;
+				if (dis<kp1[len].size*1.5) numcircle[len]++;
 			}
 
 		}
 		//cout << len << "  " << numcircle[len]<< endl;
-		if (numcircle[len]>0) {			
+		if (numcircle[len]>0) 
+		{			
 			//circle(img_1, Point(kp1[len].pt.x, kp1[len].pt.y), kp1[len].size, Scalar(0, 255, 0));
 			kp2.push_back(kp1[len]);
 		
@@ -332,27 +369,31 @@ int main(int argc, char** argv)
 	
 	kp3 = regionGrowing(img_1, kp2);
 	
-	for (int i = 0; i < kp3.size(); i++)
-	{
-		circle(img_1, kp3[i].pt, kp3[i].size, Scalar(0, kp3[i].class_id, 0), -1);
-	}
+	//for (int i = 0; i < kp3.size(); i++)
+	//{
+	//	circle(img_1, kp3[i].pt, kp3[i].size, Scalar(0, kp3[i].class_id, 0), -1);
+	//}
 
+	drawKeypoints(img_1, kp3, img_1, Scalar::all(-1), 4);
+	img_0 = img_1;
 /**************************
 	显示图片
 **************************/
 
-	namedWindow("Display", WINDOW_AUTOSIZE);
+	
 	//	cvShowImage("Display", transimg1);
+
+	resize(img_1, img_1, Size(640,480), INTER_CUBIC);
 	imshow("Display", img_1);
                                                                                     
-	int thresholdvelue = ostuKeypoint(img_1,kp2);
+//	int thresholdvelue = ostuKeypoint(img_1,kp2);
 
 	//Mat src_bin;
 	//auto oksd = threshold(img_1, src_bin, thresholdvelue, 255, CV_THRESH_BINARY);
 
 
 	//drawKeypoints(img_1, kp1, res1, Scalar::all(-1),4);
-	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
+//	IplImage* transimg1 = cvCloneImage(&(IplImage)res1);
 
 
 	//注册鼠标事件
@@ -365,9 +406,37 @@ int main(int argc, char** argv)
 	//imshow("Display", src_bin);
 
 	waitKey(0);
+	//添加label标签
+	flagKeypoint(kp2);
+	//清空myRange
+	myRange.clear();
+
 	return 0;
 }
 
+int main()
+{
 
+	sampleLabel.create(0, 1, CV_16U);
+	cout << sampleLabel << endl;
+	namedWindow("Display", WINDOW_AUTOSIZE);
+	string samplePath = "d:\\project\\traindata\\";
+	string path;
+	char sampleName[256];
+	Mat a;
+	for (int i = 100; i < 103; i++)
+	{
+		memset(sampleName, '\0', sizeof(char)* 256);
+		sprintf_s(sampleName, "%d.jpg", i);
+		//文件路径
+		path = samplePath + sampleName;
+
+		auto c = bProgess(path);
+
+	}
+
+
+
+}
 
 
