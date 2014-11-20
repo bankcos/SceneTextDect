@@ -411,7 +411,7 @@ int bProgess(String path)
 
 	for (int i = 0; i < kp2.size(); i++)
 	{	
-		int c=-1;
+		float c=-1;
 		Point a = kp2[i].pt;
 		if (myRange.empty() == true)
 		{
@@ -428,12 +428,10 @@ int bProgess(String path)
 					(a.y > myRange[myRange.size() - 1].y2)
 					)
 					c = 1;
-
-
 			}
 		}
 
-		Mat tmpLabel(1, 1, CV_16SC1, c);
+		Mat tmpLabel(1, 1, CV_32FC1, c);
 		sampleLabel.push_back(tmpLabel);
 	}
 
@@ -446,8 +444,8 @@ int bProgess(String path)
 
 int main()
 {
-	
-	sampleLabel.create(0, 1, CV_16U);
+	sampleFeature.create(0, 2, CV_32FC1);
+	sampleLabel.create(0, 1, CV_32FC1);
 	cout << sampleLabel << endl;
 	namedWindow("Display", WINDOW_AUTOSIZE);
 	string samplePath = "d:\\project\\traindata\\";
@@ -469,7 +467,7 @@ int main()
 	fs << "samplefeature" << sampleFeature;
 	fs.release();
 	FileStorage ys("d:\\project\\label.xml", FileStorage::WRITE);
-	ys << "samplefeature" << sampleLabel;
+	ys << "samplelabel" << sampleLabel;
 	ys.release();
 
 

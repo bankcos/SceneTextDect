@@ -51,31 +51,40 @@ Mat  tSIFT(String path)
 	return des;
 }
 
-String pathDir()
-{
-	string samplePath = "d:\\project\\traindata\\";
-	string path;
-	char sampleName[256];
-	Mat a;
-	for (int i = 100; i < 103; i++)
-	{
-		memset(sampleName, '\0', sizeof(char)* 256);
-		sprintf_s(sampleName, "%d.jpg", i);
-		//文件路径
-		path = samplePath + sampleName;
 
-		auto c = tSIFT(path);
-		a.push_back(c);
-		cout << i << endl;
-	}
+Mat fileRead(String path,String name)
+{
+	Mat a;
+	FileStorage fs(path, FileStorage::READ);
+	fs[name] >> a;
+	fs.release();
+	return a;
+}
+
+void mySvm(Mat feature,Mat label)
+{
+	// 设置SVM参数
+	CvSVMParams params;
+	params.svm_type = CvSVM::C_SVC;
+	params.kernel_type = CvSVM::LINEAR;
+	params.term_crit = cvTermCriteria(CV_TERMCRIT_ITER, 100, 1e-6);
+
+	cout << "开始训练" << endl;
+	// 对SVM进行训练
+	CvSVM SVM;
+	auto a=SVM.train(feature, label, Mat(), Mat(), params);
+
 
 }
 
 
-int main(){
+int main()
+{
+	Mat sampleFeature, sampleLable;
+	sampleFeature = fileRead("d:\\project\\feature.xml","samplefeature");
+	sampleLable = fileRead("d:\\project\\label.xml", "samplelabel");
 
-
-	
+	mySvm(sampleFeature, sampleLable);
 	return 0;
 }
 
