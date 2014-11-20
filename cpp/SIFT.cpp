@@ -300,12 +300,13 @@ int bProgess(String path)
 */
 
 
-
+	auto e1 = getTickCount();
 	Mat img_1 = imread(path,CV_LOAD_IMAGE_GRAYSCALE);
 
 	if (!img_1.data){
 		std::cout << "Can't open" << std::endl;
 	}
+	resize(img_1, img_1, Size(640, 480), INTER_CUBIC);
 
 	SiftFeatureDetector detector;
 	std::vector<KeyPoint> kp1,kp2;
@@ -367,14 +368,14 @@ int bProgess(String path)
 		区域生长
 **************************/
 	
-	kp3 = regionGrowing(img_1, kp2);
+	//kp3 = regionGrowing(img_1, kp2);
 	
 	//for (int i = 0; i < kp3.size(); i++)
 	//{
 	//	circle(img_1, kp3[i].pt, kp3[i].size, Scalar(0, kp3[i].class_id, 0), -1);
 	//}
 
-	drawKeypoints(img_1, kp3, img_1, Scalar::all(-1), 4);
+	//drawKeypoints(img_1, kp3, img_1, Scalar::all(-1), 4);
 	img_0 = img_1;
 /**************************
 	显示图片
@@ -383,7 +384,7 @@ int bProgess(String path)
 	
 	//	cvShowImage("Display", transimg1);
 
-	resize(img_1, img_1, Size(640,480), INTER_CUBIC);
+
 	imshow("Display", img_1);
                                                                                     
 //	int thresholdvelue = ostuKeypoint(img_1,kp2);
@@ -404,10 +405,39 @@ int bProgess(String path)
 	//namedWindow("Display", WINDOW_AUTOSIZE);
 	//cvShowImage("Display", transimg1);
 	//imshow("Display", src_bin);
-
+	auto e2 = getTickCount();
+	cout << "用时" << (e2 - e1)/getTickFrequency() << "s" << endl;
 	waitKey(0);
-	//添加label标签
-	flagKeypoint(kp2);
+
+	for (int i = 0; i < kp2.size(); i++)
+	{	
+		int c=-1;
+		Point a = kp2[i].pt;
+		if (myRange.empty() == true)
+		{
+			cout << "没有选定的点" << endl;
+			break;
+		}
+		else
+		{
+			for (int j = 0; j < myRange.size(); j++)
+			{
+				if ((a.x > myRange[myRange.size() - 1].x1) &&
+					(a.x < myRange[myRange.size() - 1].x2) &&
+					(a.y > myRange[myRange.size() - 1].y1) &&
+					(a.y > myRange[myRange.size() - 1].y2)
+					)
+					c = 1;
+
+
+			}
+		}
+
+		Mat tmpLabel(1, 1, CV_16SC1, c);
+		sampleLabel.push_back(tmpLabel);
+	}
+
+	sampleFeature.push_back(des2);
 	//清空myRange
 	myRange.clear();
 
@@ -416,7 +446,7 @@ int bProgess(String path)
 
 int main()
 {
-
+	
 	sampleLabel.create(0, 1, CV_16U);
 	cout << sampleLabel << endl;
 	namedWindow("Display", WINDOW_AUTOSIZE);
@@ -424,9 +454,10 @@ int main()
 	string path;
 	char sampleName[256];
 	Mat a;
-	for (int i = 100; i < 103; i++)
+	for (int i = 100; i < 101; i++)
 	{
 		memset(sampleName, '\0', sizeof(char)* 256);
+//		sprintf_s(sampleName, "%04i.jpg", i);
 		sprintf_s(sampleName, "%d.jpg", i);
 		//文件路径
 		path = samplePath + sampleName;
@@ -434,6 +465,12 @@ int main()
 		auto c = bProgess(path);
 
 	}
+	FileStorage fs("d:\\project\\feature.xml", FileStorage::WRITE);
+	fs << "samplefeature" << sampleFeature;
+	fs.release();
+	FileStorage ys("d:\\project\\label.xml", FileStorage::WRITE);
+	ys << "samplefeature" << sampleLabel;
+	ys.release();
 
 
 	return 0;

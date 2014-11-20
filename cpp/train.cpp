@@ -51,8 +51,8 @@ Mat  tSIFT(String path)
 	return des;
 }
 
-int main(){
-
+String pathDir()
+{
 	string samplePath = "d:\\project\\traindata\\";
 	string path;
 	char sampleName[256];
@@ -63,11 +63,18 @@ int main(){
 		sprintf_s(sampleName, "%d.jpg", i);
 		//文件路径
 		path = samplePath + sampleName;
-		
-		auto c=tSIFT(path);
+
+		auto c = tSIFT(path);
 		a.push_back(c);
 		cout << i << endl;
 	}
+
+}
+
+
+int main(){
+
+
 	
 	return 0;
 }
